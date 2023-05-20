@@ -32,10 +32,99 @@ class Painter:
             d.draw()
 
 
+class MainMenu(pygame_menu.Menu):
+    @classmethod
+    def set_difficulty(cls, value, difficulty):
+        print(value)
+        print(difficulty)
+
+    @classmethod
+    def start_the_game(cls):
+        game = Game()
+        game.start()
+
+    def level_menu(self):
+        self._open(self.level)
+
+    def __init__(self):
+        super().__init__('Welcome', 800, 600, theme=pygame_menu.themes.THEME_SOLARIZED)
+        self.add.text_input('Name: ', default='username', maxchar=20)
+        self.add.button('Play', self.start_the_game)
+        self.add.button('Levels', self.level_menu)
+        self.add.button('Quit', pygame_menu.events.EXIT)
+
+        self.level = pygame_menu.Menu('Select a Difficulty', 800, 600, theme=pygame_menu.themes.THEME_BLUE)
+        self.level.add.selector('Difficulty :', [('Hard', 1), ('Easy', 2)], onchange=self.set_difficulty)
+
+
+class PauseMenu(MainMenu):
+
+    def __init__(self):
+        super().__init__('Welcome', 800, 600, theme=pygame_menu.themes.THEME_SOLARIZED)
+        self.add.button('Play', self.start_the_game)
+        self.add.button('Quit', pygame_menu.events.EXIT)
+
+
+class Game:
+    def __init__(self):
+        self.is_running = False
+        self.pause_menu = False
+
+    @classmethod
+    def get_distance(cls, bac1, bac2):
+        dist_x = abs(bac1[0] - bac2[0])
+        dist_y = abs(bac1[1] - bac2[1])
+        return (dist_x ** 2 + dist_y ** 2) ** 0.5  # длина между центрами окружностей
+
+    @classmethod
+    def drawtext(cls, message, pos, color=(255, 255, 255)):
+        screen.blit(font.render(message, True, color), pos)
+
+    def update(self):
+        pass
+
+    def start(self):
+        global camera
+        self.is_running = True
+        while self.is_running:
+            clock.tick(FPS)
+            eventts = pygame.event.get()
+            for e in eventts:
+                if e.type == pygame.KEYDOWN:
+                    if e.key == pygame.K_ESCAPE:
+                        self.is_running = False
+                    if e.key == pygame.K_SPACE:
+                        del camera
+                        bacterium.split()
+                    if e.key == pygame.K_w:
+                        bacterium.feed()
+                if e.type == pygame.QUIT:
+                    self.is_running = False
+                    pygame.quit()
+                    quit()
+                if bacterium.mass > 2400:
+                    self.is_running = False
+                    pygame.quit()
+                    quit()
+
+            bacterium.move()
+            bacterium.collision_check(cells.cell_list)
+            if camera is not None:
+                camera.update(bacterium)
+            screen.fill((8, 5, 30))
+            painter.paint()
+
+            if pausemenu.is_enabled():
+                pausemenu.update(events)
+                pausemenu.draw(screen)
+
+            pygame.display.flip()
+
+
 class CanPaint:
-    def __init__(self, surface, camera):
+    def __init__(self, surface, cam):
         self.surface = surface
-        self.camera = camera
+        self.camera = cam
 
     def draw(self):
         pass
@@ -61,8 +150,8 @@ class Camera:
 
 
 class Cell(CanPaint):
-    def __init__(self, surface, camera):
-        super().__init__(surface, camera)
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
         self.mass = 5
         self.x, self.y = rnd.randint(11, 2489), rnd.randint(11, 2489)
         self.color = (245, 0, 245)
@@ -75,8 +164,8 @@ class Cell(CanPaint):
 
 
 class CellList(CanPaint):
-    def __init__(self, surface, camera, num):
-        super().__init__(surface, camera)
+    def __init__(self, surface, cam, num):
+        super().__init__(surface, cam)
         self.cell_list = []
         for _ in range(num):
             self.cell_list.append(Cell(self.surface, self.camera))
@@ -91,8 +180,8 @@ class CellList(CanPaint):
 
 
 class Grid(CanPaint):
-    def __init__(self, surface, camera):
-        super().__init__(surface, camera)
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
         self.color_grid = "#00bfff"
 
     def draw(self):
@@ -106,8 +195,8 @@ class Grid(CanPaint):
 class Player(CanPaint):
     FONT_COLOR = "#2a2a2c"
 
-    def __init__(self, surface, camera, name=""):
-        super().__init__(surface, camera)
+    def __init__(self, surface, cam, name=""):
+        super().__init__(surface, cam)
         self.x, self.y = rnd.randint(300, 2200), rnd.randint(300, 2200)
         self.mass, self.speed = 20, 4
         self.color = "#1c5bed"
@@ -176,50 +265,6 @@ class Player(CanPaint):
                         Player.FONT_COLOR)
 
 
-class MainMenu(pygame_menu.Menu):
-    def set_difficulty(self, value, difficulty):
-        print(value)
-        print(difficulty)
-
-    def start_the_game(self):
-        game = Game()
-        game.start()
-
-    def level_menu(self):
-        self._open(self.level)
-
-    def __init__(self):
-        super().__init__('Welcome', 800, 600, theme=pygame_menu.themes.THEME_SOLARIZED)
-        self.add.text_input('Name: ', default='username', maxchar=20)
-        self.add.button('Play', self.start_the_game)
-        self.add.button('Levels', self.level_menu)
-        self.add.button('Quit', pygame_menu.events.EXIT)
-
-        self.level = pygame_menu.Menu('Select a Difficulty', 800, 600, theme=pygame_menu.themes.THEME_BLUE)
-        self.level.add.selector('Difficulty :', [('Hard', 1), ('Easy', 2)], onchange=self.set_difficulty)
-
-
-class PauseMenu(pygame_menu.Menu):
-    def set_difficulty(self, value, difficulty):
-        print(value)
-        print(difficulty)
-
-    def start_the_game(self):
-        game = Game()
-        game.start()
-
-    def level_menu(self):
-        self._open(self.level)
-
-    def __init__(self):
-        super().__init__('Welcome', 800, 600, theme=pygame_menu.themes.THEME_SOLARIZED)
-        self.add.button('Play', self.start_the_game)
-        self.add.button('Quit', pygame_menu.events.EXIT)
-
-        self.level = pygame_menu.Menu('Select a Difficulty', 800, 600, theme=pygame_menu.themes.THEME_BLUE)
-        self.level.add.selector('Difficulty :', [('Hard', 1), ('Easy', 2)], onchange=self.set_difficulty)
-
-
 # Initialize essential entities
 camera = Camera()
 
@@ -233,57 +278,9 @@ painter.add(cells)
 painter.add(bacterium)
 
 
-class Game:
-    def __init__(self):
-        self.is_running = False
-
-    def get_distance(self, bac1, bac2):
-        dist_x = abs(bac1[0] - bac2[0])
-        dist_y = abs(bac1[1] - bac2[1])
-        return (dist_x ** 2 + dist_y ** 2) ** 0.5  # длина между центрами окружностей
-
-    def drawtext(self, message, pos, color=(255, 255, 255)):
-        screen.blit(font.render(message, True, color), pos)
-
-    def update(self):
-        pass
-
-    def start(self):
-        global camera
-        self.is_running = True
-        while self.is_running:
-            clock.tick(FPS)
-            eventts = pygame.event.get()
-            for e in eventts:
-                if e.type == pygame.KEYDOWN:
-                    if e.key == pygame.K_ESCAPE:
-                        self.is_running = False
-                    if e.key == pygame.K_SPACE:
-                        del camera
-                        bacterium.split()
-                    if e.key == pygame.K_w:
-                        bacterium.feed()
-                if e.type == pygame.QUIT:
-                    self.is_running = False
-                    pygame.quit()
-                    quit()
-                if bacterium.mass > 2400:
-                    self.is_running = False
-                    pygame.quit()
-                    quit()
-
-            bacterium.move()
-            bacterium.collision_check(cells.cell_list)
-            if camera is not None:
-                camera.update(bacterium)
-            screen.fill((8, 5, 30))
-            painter.paint()
-
-            pygame.display.flip()
-
-
 pausemenu = PauseMenu()
 mainmenu = MainMenu()
+pygame.mixer.music.play(-1)
 while True:
     events = pygame.event.get()
     for event in events:
@@ -298,9 +295,6 @@ while True:
     if mainmenu.is_enabled():
         mainmenu.update(events)
         mainmenu.draw(screen)
-
-    if pausemenu.is_enabled():
-        pausemenu.update(events)
-        pausemenu.draw(screen)
-
+    else:
+        pygame.mixer.music.pause()
     pygame.display.update()
