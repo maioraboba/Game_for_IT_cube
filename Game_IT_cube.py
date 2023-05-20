@@ -258,7 +258,6 @@ class Game:
                 if e.type == pygame.KEYDOWN:
                     if e.key == pygame.K_ESCAPE:
                         self.is_running = False
-                        pausemenu = PauseMenu()
                     if e.key == pygame.K_SPACE:
                         del camera
                         bacterium.split()
