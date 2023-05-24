@@ -43,27 +43,27 @@ class MainMenu(pygame_menu.Menu):
         game = Game()
         game.start()
 
-    def level_menu(self):
-        self._open(self.level)
+    def settings_menu(self):
+        self._open(self.settings)
 
     def __init__(self):
-        super().__init__('Welcome', 800, 600, theme=pygame_menu.themes.THEME_SOLARIZED)
+        super().__init__('Welcome', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_SOLARIZED)
         self.add.text_input('Name: ', default='username', maxchar=20)
         self.add.button('Play', self.start_the_game)
-        self.add.button('Levels', self.level_menu)
+        self.add.button('Settings', self.settings_menu)
         self.add.button('Quit', pygame_menu.events.EXIT)
 
-        self.level = pygame_menu.Menu('Select a Difficulty', 800, 600, theme=pygame_menu.themes.THEME_BLUE)
-        self.level.add.selector('Difficulty :', [('Hard', 1), ('Easy', 2)], onchange=self.set_difficulty)
+        self.settings = pygame_menu.Menu('Select a Difficulty', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_BLUE)
+        self.settings.add.selector('Difficulty :', [('Hard', 1), ('Easy', 2)], onchange=self.set_difficulty)
 
 
-class PauseMenu(MainMenu):
-
-    def __init__(self):
-        super().__init__('Welcome', 800, 600, theme=pygame_menu.themes.THEME_SOLARIZED)
-        self.add.button('Play', self.start_the_game)
-        self.add.button('Quit', pygame_menu.events.EXIT)
-
+# class PauseMenu(MainMenu):
+#
+#     def __init__(self):
+#         super().__init__('Welcome', 800, 600, theme=pygame_menu.themes.THEME_SOLARIZED)
+#         self.add.button('Play', self.start_the_game)
+#         self.add.button('Quit', pygame_menu.events.EXIT)
+#
 
 class Game:
     def __init__(self):
@@ -86,6 +86,7 @@ class Game:
     def start(self):
         global camera
         self.is_running = True
+        pygame.mixer.music.pause()
         while self.is_running:
             clock.tick(FPS)
             eventts = pygame.event.get()
@@ -93,6 +94,7 @@ class Game:
                 if e.type == pygame.KEYDOWN:
                     if e.key == pygame.K_ESCAPE:
                         self.is_running = False
+                        pygame.mixer.music.pause()
                     if e.key == pygame.K_SPACE:
                         del camera
                         bacterium.split()
@@ -114,9 +116,9 @@ class Game:
             screen.fill((8, 5, 30))
             painter.paint()
 
-            if pausemenu.is_enabled():
-                pausemenu.update(events)
-                pausemenu.draw(screen)
+            # if pausemenu.is_enabled():
+            #     pausemenu.update(events)
+            #     pausemenu.draw(screen)
 
             pygame.display.flip()
 
@@ -255,7 +257,7 @@ class Player(CanPaint):
         x, y = self.camera.x, self.camera.y
         center = (int(self.x * zoom + x), int(self.y * zoom + y))
 
-        # Draw the ouline of the player as a darker, bigger circle
+        # Draw the outline of the player as a darker, bigger circle
         pygame.draw.circle(self.surface, self.outline_color, center, int((self.mass / 2 + 3) * zoom))
         # Draw the actual player as a circle
         pygame.draw.circle(self.surface, self.color, center, int(self.mass / 2 * zoom))
@@ -278,7 +280,7 @@ painter.add(cells)
 painter.add(bacterium)
 
 
-pausemenu = PauseMenu()
+# pausemenu = PauseMenu()
 mainmenu = MainMenu()
 pygame.mixer.music.play(-1)
 while True:
@@ -295,6 +297,4 @@ while True:
     if mainmenu.is_enabled():
         mainmenu.update(events)
         mainmenu.draw(screen)
-    else:
-        pygame.mixer.music.pause()
     pygame.display.update()
