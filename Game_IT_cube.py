@@ -6,6 +6,7 @@ import random as rnd
 WIDTH, HEIGHT = 1200, 800
 WIDTH_ZONE, HEIGHT_ZONE = 2500, 2500
 FPS = 60
+name = "username"
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -34,6 +35,17 @@ class Painter:
 
 
 class MainMenu(pygame_menu.Menu):
+    def __init__(self):
+        super().__init__('Welcome to Bubble Fight', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
+        self.level_volume = 10
+        self.add.text_input('Name: ', default='username', maxchar=20, onchange=Game.set_name)
+        self.add.button('Play', self.start_the_game)
+        self.add.button('Settings', self.settings_menu)
+        self.add.button('Quit', pygame_menu.events.EXIT)
+
+        self.settings = pygame_menu.Menu('Settings :', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
+        self.settings.add.progress_bar('Volume :', self.level_volume)
+
     @classmethod
     def set_difficulty(cls, value, difficulty):
         print(value)
@@ -46,20 +58,6 @@ class MainMenu(pygame_menu.Menu):
 
     def settings_menu(self):
         self._open(self.settings)
-
-    def take_text_value(self, name):
-        Player.name = name
-
-    def __init__(self):
-        super().__init__('Welcome to Bubble Fight', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
-        self.level_volume = 10
-        self.add.text_input('Name: ', default='username', maxchar=20, onchange=set_difficulty)
-        self.add.button('Play', self.start_the_game)
-        self.add.button('Settings', self.settings_menu)
-        self.add.button('Quit', pygame_menu.events.EXIT)
-
-        self.settings = pygame_menu.Menu('Settings :', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
-        self.settings.add.progress_bar('Volume :', self.level_volume)
 
 
 # class PauseMenu(MainMenu):
@@ -74,6 +72,15 @@ class Game:
     def __init__(self):
         self.is_running = False
         self.pause_menu = False
+
+    @classmethod
+    def get_name(cls):
+        return name
+
+    @classmethod
+    def set_name(cls, value):
+        global name
+        name = value
 
     @classmethod
     def get_distance(cls, bac1, bac2):
@@ -91,6 +98,10 @@ class Game:
     def start(self):
         global camera
         self.is_running = True
+        painter = Painter()
+        painter.add(grid)
+        painter.add(cells)
+        painter.add(bacterium)
         my_sound.pause()
         while self.is_running:
             clock.tick(FPS)
@@ -204,14 +215,11 @@ class Player(CanPaint):
 
     def __init__(self, surface, cam):
         super().__init__(surface, cam)
-        self.name = ""
         self.x, self.y = rnd.randint(300, 2200), rnd.randint(300, 2200)
         self.mass, self.speed = 20, 4
         self.outline_size = 3 + self.mass / 2
         self.color = "#1c5bed"
         self.outline_color = "#ccccff"
-        if not self.name:
-            self.name = "barabashka"
 
     def collision_check(self, foods):
         for food in foods:
@@ -267,8 +275,8 @@ class Player(CanPaint):
         # Draw the actual player as a circle
         pygame.draw.circle(self.surface, self.color, center, int(self.mass / 2 * zoom))
         # Draw player's name
-        fw, fh = font.size(self.name)
-        Game().drawtext(self.name, (self.x * zoom + x - int(fw / 2), self.y * zoom + y - int(fh / 2)),
+        fw, fh = font.size(Game.get_name())
+        Game().drawtext(Game.get_name(), (self.x * zoom + x - int(fw / 2), self.y * zoom + y - int(fh / 2)),
                         Player.FONT_COLOR)
 
 
@@ -282,12 +290,6 @@ bacterium = Player(screen, camera)
 mainmenu = MainMenu()
 my_sound.play(-1)
 my_sound.set_volume(0.1)
-
-painter = Painter()
-painter.add(grid)
-painter.add(cells)
-painter.add(bacterium)
-
 
 # pausemenu = PauseMenu()
 
