@@ -14,9 +14,9 @@ screen.fill((0, 0, 0))
 pygame.display.set_caption("My Game")
 clock = pygame.time.Clock()
 
-# загрузка музыки 
+# загрузка музыки
 pygame.mixer.music.load("Lines of Code.mp3")
-my_sound = pygame.mixer.music
+menu_sound = pygame.mixer.music
 
 font = pygame.font.SysFont('Verdana.ttf', 20, True)
 big_font = pygame.font.SysFont('Verdana.ttf', 24, True)
@@ -60,14 +60,6 @@ class MainMenu(pygame_menu.Menu):
         self._open(self.settings)
 
 
-# class PauseMenu(MainMenu):
-#
-#     def __init__(self):
-#         super().__init__('Welcome', 800, 600, theme=pygame_menu.themes.THEME_SOLARIZED)
-#         self.add.button('Play', self.start_the_game)
-#         self.add.button('Quit', pygame_menu.events.EXIT)
-#
-
 class Game:
     def __init__(self):
         self.is_running = False
@@ -102,7 +94,7 @@ class Game:
         painter.add(grid)
         painter.add(cells)
         painter.add(bacterium)
-        my_sound.pause()
+        menu_sound.pause()
         while self.is_running:
             clock.tick(FPS)
             eventts = pygame.event.get()
@@ -110,17 +102,14 @@ class Game:
                 if e.type == pygame.KEYDOWN:
                     if e.key == pygame.K_ESCAPE:
                         self.is_running = False
-                        pygame.mixer.music.pause()
+                        pygame.quit()
+                        quit()
                     if e.key == pygame.K_SPACE:
                         del camera
                         bacterium.split()
                     if e.key == pygame.K_w:
                         bacterium.feed()
-                if e.type == pygame.QUIT:
-                    self.is_running = False
-                    pygame.quit()
-                    quit()
-                if bacterium.mass > 2400:
+                if e.type == pygame.QUIT or bacterium.mass > 2400:
                     self.is_running = False
                     pygame.quit()
                     quit()
@@ -131,10 +120,6 @@ class Game:
                 camera.update(bacterium)
             screen.fill((8, 5, 30))
             painter.paint()
-
-            # if pausemenu.is_enabled():
-            #     pausemenu.update(events)
-            #     pausemenu.draw(screen)
 
             pygame.display.flip()
 
@@ -229,6 +214,7 @@ class Player(CanPaint):
                 cells.new_cell(rnd.choice([1, 0, 1]))
 
     def move(self):
+        self.outline_size = 3 + self.mass / 2
         go_x, go_y = pygame.mouse.get_pos()
         rotation = math.atan2(go_y - float(HEIGHT) / 2, go_x - float(WIDTH) / 2)
         rotation *= 180 / math.pi
@@ -240,7 +226,7 @@ class Player(CanPaint):
             vy = self.speed - abs(vx)
 
         if self.x + vx - self.outline_size < 0:
-            self.x = self.mass / 2 + self.outline_size
+            self.x = self.outline_size
         elif self.x + vx + self.outline_size > WIDTH_ZONE:
             self.x = WIDTH_ZONE - self.outline_size
         else:
@@ -288,10 +274,8 @@ cells = CellList(screen, camera, 1000)
 bacterium = Player(screen, camera)
 
 mainmenu = MainMenu()
-my_sound.play(-1)
-my_sound.set_volume(0.1)
-
-# pausemenu = PauseMenu()
+menu_sound.play(-1)
+menu_sound.set_volume(0.1)
 
 while True:
     events = pygame.event.get()
