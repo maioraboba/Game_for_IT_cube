@@ -14,7 +14,7 @@ screen.fill((0, 0, 0))
 pygame.display.set_caption("My Game")
 clock = pygame.time.Clock()
 
-# загрузка музыки
+# загрузка музыки 
 pygame.mixer.music.load("Lines of Code.mp3")
 my_sound = pygame.mixer.music
 
