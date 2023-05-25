@@ -284,25 +284,26 @@ class Game:
             pygame.display.flip()
 
 
-pausemenu = PauseMenu()
-mainmenu = MainMenu()
-while True:
-    events = pygame.event.get()
-    for event in events:
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE and Game().is_running:
+if __name__ == "__main__":
+    pausemenu = PauseMenu()
+    mainmenu = MainMenu()
+    while True:
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE and Game().is_running:
+                    pygame.quit()
+                    quit()
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            quit()
 
-    if mainmenu.is_enabled():
-        mainmenu.update(events)
-        mainmenu.draw(screen)
+        if mainmenu.is_enabled():
+            mainmenu.update(events)
+            mainmenu.draw(screen)
 
-    if pausemenu.is_enabled():
-        pausemenu.update(events)
-        pausemenu.draw(screen)
+        if pausemenu.is_enabled():
+            pausemenu.update(events)
+            pausemenu.draw(screen)
 
-    pygame.display.update()
+        pygame.display.update()
