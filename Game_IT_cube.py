@@ -17,6 +17,10 @@ clock = pygame.time.Clock()
 # загрузка музыки
 pygame.mixer.music.load("Lines of Code.mp3")
 menu_sound = pygame.mixer.music
+eat_sound = pygame.mixer.Sound("eat_sound.wav")
+click = pygame.mixer.Sound("click.wav")
+eat_sound.set_volume(0.1)
+click.set_volume(0.1)
 
 font = pygame.font.SysFont('Verdana.ttf', 20, True)
 big_font = pygame.font.SysFont('Verdana.ttf', 24, True)
@@ -57,6 +61,7 @@ class MainMenu(pygame_menu.Menu):
         game.start()
 
     def settings_menu(self):
+        click.play()
         self._open(self.settings)
 
 
@@ -72,6 +77,7 @@ class Game:
     @classmethod
     def set_name(cls, value):
         global name
+        click.play()
         name = value
 
     @classmethod
@@ -89,6 +95,7 @@ class Game:
 
     def start(self):
         global camera
+        click.play()
         self.is_running = True
         painter = Painter()
         painter.add(grid)
@@ -109,7 +116,12 @@ class Game:
                         bacterium.split()
                     if e.key == pygame.K_w:
                         bacterium.feed()
-                if e.type == pygame.QUIT or bacterium.mass > 2400:
+                if e.type == pygame.QUIT:
+                    self.is_running = False
+                    pygame.quit()
+                    quit()
+                if bacterium.mass > 2400:
+                    bacterium.mass = 2500
                     self.is_running = False
                     pygame.quit()
                     quit()
@@ -210,6 +222,7 @@ class Player(CanPaint):
         for food in foods:
             if Game().get_distance([food.x, food.y], [self.x, self.y]) <= self.mass / 2:
                 self.mass += 0.25
+                eat_sound.play()
                 foods.remove(food)
                 cells.new_cell(rnd.choice([1, 0, 1]))
 
