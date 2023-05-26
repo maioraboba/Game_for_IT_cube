@@ -130,7 +130,7 @@ class Game:
             bacterium.collision_check(cells.cell_list)
             if camera is not None:
                 camera.update(bacterium)
-            screen.fill((8, 5, 30))
+            screen.fill((9, 10, 21))
             painter.paint()
 
             pygame.display.flip()
@@ -169,7 +169,19 @@ class Cell(CanPaint):
         super().__init__(surface, cam)
         self.mass = 5
         self.x, self.y = rnd.randint(11, 2489), rnd.randint(11, 2489)
-        self.color = (245, 0, 245)
+        colors_cells = [
+            [242, 242, 101],
+            [141, 6, 191],
+            [141, 66, 212],
+            [232, 22, 88],
+            [242, 232, 33],
+            [212, 55, 121],
+            [22, 212, 11],
+            [22, 232, 55],
+            [202, 101, 252],
+            [242, 151, 33]
+        ]
+        self.color = rnd.choice(colors_cells)
 
     def draw(self):
         zoom = self.camera.zoom
