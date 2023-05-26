@@ -4,9 +4,11 @@ import math
 import random as rnd
 
 WIDTH, HEIGHT = 1200, 800
-WIDTH_ZONE, HEIGHT_ZONE = 2500, 2500
+WIDTH_ZONE, HEIGHT_ZONE = 10000, 10000
 FPS = 60
 name = "username"
+level_volume = 0.05
+type_font = 'Verdana.ttf'
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -19,11 +21,11 @@ pygame.mixer.music.load("Lines of Code.mp3")
 menu_sound = pygame.mixer.music
 eat_sound = pygame.mixer.Sound("eat_sound.wav")
 click = pygame.mixer.Sound("click.wav")
-eat_sound.set_volume(0.1)
-click.set_volume(0.1)
+eat_sound.set_volume(level_volume)
+click.set_volume(level_volume)
 
-font = pygame.font.SysFont('Verdana.ttf', 20, True)
-big_font = pygame.font.SysFont('Verdana.ttf', 24, True)
+font = pygame.font.SysFont(type_font, 24, True)
+big_font = pygame.font.SysFont(type_font, 28, True)
 
 
 class Painter:
@@ -41,14 +43,13 @@ class Painter:
 class MainMenu(pygame_menu.Menu):
     def __init__(self):
         super().__init__('Welcome to Bubble Fight', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
-        self.level_volume = 10
-        self.add.text_input('Name: ', default='username', maxchar=20, onchange=Game.set_name)
+        self.add.text_input('Name: ', default='username', maxchar=12, onchange=Game.set_name)
         self.add.button('Play', self.start_the_game)
         self.add.button('Settings', self.settings_menu)
         self.add.button('Quit', pygame_menu.events.EXIT)
 
         self.settings = pygame_menu.Menu('Settings :', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
-        self.settings.add.progress_bar('Volume :', self.level_volume)
+        self.settings.add.progress_bar('Volume :', level_volume * 100, onchange=Game.set_volume_music)
 
     @classmethod
     def set_difficulty(cls, value, difficulty):
@@ -81,13 +82,21 @@ class Game:
         name = value
 
     @classmethod
+    def set_volume_music(cls, value):
+        global level_volume
+        click.play()
+        level_volume = value
+
+    @classmethod
     def get_distance(cls, bac1, bac2):
         dist_x = abs(bac1[0] - bac2[0])
         dist_y = abs(bac1[1] - bac2[1])
         return (dist_x ** 2 + dist_y ** 2) ** 0.5  # длина между центрами окружностей
 
     @classmethod
-    def drawtext(cls, message, pos, color=(255, 255, 255)):
+    def drawtext(cls, message, pos, mass, color=(255, 255, 255)):
+        global font
+        font = pygame.font.SysFont(type_font, int(24 ), True)
         screen.blit(font.render(message, True, color), pos)
 
     def update(self):
@@ -120,8 +129,8 @@ class Game:
                     self.is_running = False
                     pygame.quit()
                     quit()
-                if bacterium.mass > 2400:
-                    bacterium.mass = 2500
+                if bacterium.mass > WIDTH_ZONE - 100:
+                    bacterium.mass = WIDTH_ZONE
                     self.is_running = False
                     pygame.quit()
                     quit()
@@ -168,7 +177,7 @@ class Cell(CanPaint):
     def __init__(self, surface, cam):
         super().__init__(surface, cam)
         self.mass = 5
-        self.x, self.y = rnd.randint(11, 2489), rnd.randint(11, 2489)
+        self.x, self.y = rnd.randint(11, WIDTH_ZONE - 11), rnd.randint(11, WIDTH_ZONE - 11)
         colors_cells = [
             [242, 242, 101],
             [141, 6, 191],
@@ -214,17 +223,17 @@ class Grid(CanPaint):
     def draw(self):
         zoom = self.camera.zoom
         x, y = self.camera.x, self.camera.y
-        for i in range(0, 2501, 50):
-            pygame.draw.line(self.surface, self.color_grid, (x, y + i * zoom), (2500 * zoom + x, i * zoom + y), 3)
-            pygame.draw.line(self.surface, self.color_grid, (x + i * zoom, y), (i * zoom + x, 2500 * zoom + y), 3)
+        for i in range(0, WIDTH_ZONE + 1, 50):
+            pygame.draw.line(self.surface, self.color_grid, (x, y + i * zoom), (WIDTH_ZONE * zoom + x, i * zoom + y), 3)
+            pygame.draw.line(self.surface, self.color_grid, (x + i * zoom, y), (i * zoom + x, WIDTH_ZONE * zoom + y), 3)
 
 
 class Player(CanPaint):
-    FONT_COLOR = "#2a2a2c"
+    FONT_COLOR = "#000000"
 
     def __init__(self, surface, cam):
         super().__init__(surface, cam)
-        self.x, self.y = rnd.randint(300, 2200), rnd.randint(300, 2200)
+        self.x, self.y = rnd.randint(300, WIDTH_ZONE - 300), rnd.randint(300, WIDTH_ZONE - 300)
         self.mass, self.speed = 20, 4
         self.outline_size = 3 + self.mass / 2
         self.color = "#1c5bed"
@@ -233,7 +242,7 @@ class Player(CanPaint):
     def collision_check(self, foods):
         for food in foods:
             if Game().get_distance([food.x, food.y], [self.x, self.y]) <= self.mass / 2:
-                self.mass += 0.25
+                self.mass += 1
                 eat_sound.play()
                 foods.remove(food)
                 cells.new_cell(rnd.choice([1, 0, 1]))
@@ -287,20 +296,22 @@ class Player(CanPaint):
         pygame.draw.circle(self.surface, self.color, center, int(self.mass / 2 * zoom))
         # Draw player's name
         fw, fh = font.size(Game.get_name())
-        Game().drawtext(Game.get_name(), (self.x * zoom + x - int(fw / 2), self.y * zoom + y - int(fh / 2)),
-                        Player.FONT_COLOR)
+        Game().drawtext(Game.get_name(), (self.x * zoom + x - int(fw / 2),
+                                          self.y * zoom + y - int(fh / 2) - 5), self.mass, Player.FONT_COLOR)
+        Game().drawtext(str(self.mass), ((self.x * zoom + x - int(fw / 2)) * 1.05,
+                                         self.y * zoom + y - int(fh / 2) + 15), self.mass, Player.FONT_COLOR)
 
 
 # Initialize essential entities
 camera = Camera()
 
 grid = Grid(screen, camera)
-cells = CellList(screen, camera, 1000)
+cells = CellList(screen, camera, 4000)
 bacterium = Player(screen, camera)
 
 mainmenu = MainMenu()
 menu_sound.play(-1)
-menu_sound.set_volume(0.1)
+menu_sound.set_volume(level_volume)
 
 while True:
     events = pygame.event.get()
