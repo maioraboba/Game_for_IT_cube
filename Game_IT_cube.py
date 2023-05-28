@@ -4,7 +4,7 @@ import math
 import random as rnd
 
 WIDTH, HEIGHT = 1200, 800
-WIDTH_ZONE, HEIGHT_ZONE = 10000, 10000
+WIDTH_ZONE, HEIGHT_ZONE = 3000, 3000
 FPS = 60
 name = "username"
 level_volume = 0.05
@@ -61,6 +61,34 @@ class MainMenu(pygame_menu.Menu):
         game = Game()
         game.start()
 
+    @classmethod
+    def start(cls):
+        global camera, grid, cells, bacterium
+        camera = Camera()
+        grid = Grid(screen, camera)
+        cells = CellList(screen, camera, 1000)
+        bacterium = Player(screen, camera)
+
+        mainmenu = MainMenu()
+        menu_sound.play(-1)
+        menu_sound.set_volume(level_volume)
+
+        while True:
+            events = pygame.event.get()
+            for event in events:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE and Game().is_running:
+                        pygame.quit()
+                        quit()
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+
+            if mainmenu.is_enabled():
+                mainmenu.update(events)
+                mainmenu.draw(screen)
+            pygame.display.update()
+
     def settings_menu(self):
         click.play()
         self._open(self.settings)
@@ -94,9 +122,7 @@ class Game:
         return (dist_x ** 2 + dist_y ** 2) ** 0.5  # длина между центрами окружностей
 
     @classmethod
-    def drawtext(cls, message, pos, mass, color=(255, 255, 255)):
-        global font
-        font = pygame.font.SysFont(type_font, int(24 ), True)
+    def drawtext(cls, message, pos, color=(255, 255, 255)):
         screen.blit(font.render(message, True, color), pos)
 
     def update(self):
@@ -132,8 +158,7 @@ class Game:
                 if bacterium.mass > WIDTH_ZONE - 100:
                     bacterium.mass = WIDTH_ZONE
                     self.is_running = False
-                    pygame.quit()
-                    quit()
+                    MainMenu.start()
 
             bacterium.move()
             bacterium.collision_check(cells.cell_list)
@@ -297,34 +322,16 @@ class Player(CanPaint):
         # Draw player's name
         fw, fh = font.size(Game.get_name())
         Game().drawtext(Game.get_name(), (self.x * zoom + x - int(fw / 2),
-                                          self.y * zoom + y - int(fh / 2) - 5), self.mass, Player.FONT_COLOR)
+                                          self.y * zoom + y - int(fh / 2) - 5), Player.FONT_COLOR)
         Game().drawtext(str(self.mass), ((self.x * zoom + x - int(fw / 2)) * 1.05,
-                                         self.y * zoom + y - int(fh / 2) + 15), self.mass, Player.FONT_COLOR)
+                                         self.y * zoom + y - int(fh / 2) + 15), Player.FONT_COLOR)
 
 
 # Initialize essential entities
 camera = Camera()
-
 grid = Grid(screen, camera)
-cells = CellList(screen, camera, 4000)
+cells = CellList(screen, camera, 700)
 bacterium = Player(screen, camera)
 
-mainmenu = MainMenu()
-menu_sound.play(-1)
-menu_sound.set_volume(level_volume)
 
-while True:
-    events = pygame.event.get()
-    for event in events:
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE and Game().is_running:
-                pygame.quit()
-                quit()
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            quit()
-
-    if mainmenu.is_enabled():
-        mainmenu.update(events)
-        mainmenu.draw(screen)
-    pygame.display.update()
+MainMenu.start()
