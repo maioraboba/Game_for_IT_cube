@@ -254,15 +254,15 @@ class Grid(CanPaint):
 
 
 class Player(CanPaint):
-    FONT_COLOR = "#000000"
+    FONT_COLOR = "#deeece"
 
     def __init__(self, surface, cam):
         super().__init__(surface, cam)
         self.x, self.y = rnd.randint(300, WIDTH_ZONE - 300), rnd.randint(300, WIDTH_ZONE - 300)
         self.mass, self.speed = 20, 4
         self.outline_size = 3 + self.mass / 2
-        self.color = "#1c5bed"
-        self.outline_color = "#ccccff"
+        self.color = "#00c77b"
+        self.outline_color = "#007a3f"
 
     def collision_check(self, foods):
         for food in foods:
