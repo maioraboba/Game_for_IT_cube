@@ -1,3 +1,5 @@
+print(*[242, 242, 101] * 10)
+
 import pygame
 import math
 

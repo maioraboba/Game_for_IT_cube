@@ -1,6 +1,9 @@
+import time
+
 import pygame
 import pygame_menu
 import math
+from itertools import cycle
 import random as rnd
 
 WIDTH, HEIGHT = 1200, 800
@@ -28,6 +31,25 @@ font = pygame.font.SysFont(type_font, 24, True)
 big_font = pygame.font.SysFont(type_font, 28, True)
 
 
+def choice_color():
+    chance = rnd.randint(1, 100)
+
+    if chance <= 70:
+        return GreenCell(screen, camera)
+
+    if 71 <= chance <= 85:
+        return RedCell(screen, camera)
+
+    if 86 <= chance <= 90:
+        return PinkCell(screen, camera)
+
+    if 91 <= chance <= 95:
+        return WhiteCell(screen, camera)
+
+    if 96 <= chance <= 100:
+        return RainbowCell(screen, camera)
+
+
 class Painter:
     def __init__(self):
         self.paints = []
@@ -45,8 +67,11 @@ class MainMenu(pygame_menu.Menu):
         super().__init__('Welcome to Bubble Fight', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
         self.add.text_input('Name: ', default='username', maxchar=12, onchange=Game.set_name)
         self.add.button('Play', self.start_the_game)
-        self.add.button('Settings', self.settings_menu)
+        self.add.button('Manual', self.manual_menu)
+        # self.add.button('Settings', self.settings_menu)
         self.add.button('Quit', pygame_menu.events.EXIT)
+
+        self.manual = pygame_menu.Menu('Manual :', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
 
         self.settings = pygame_menu.Menu('Settings :', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
         self.settings.add.progress_bar('Volume :', level_volume * 100, onchange=Game.set_volume_music)
@@ -93,6 +118,11 @@ class MainMenu(pygame_menu.Menu):
         click.play()
         self._open(self.settings)
 
+    def manual_menu(self):
+        click.play()
+
+        self._open(self.manual)
+
 
 class Game:
     def __init__(self):
@@ -119,7 +149,7 @@ class Game:
     def get_distance(cls, bac1, bac2):
         dist_x = abs(bac1[0] - bac2[0])
         dist_y = abs(bac1[1] - bac2[1])
-        return (dist_x ** 2 + dist_y ** 2) ** 0.5  # длина между центрами окружностей
+        return (dist_x ** 2 + dist_y ** 2) ** 0.5
 
     @classmethod
     def drawtext(cls, message, pos, color=(255, 255, 255)):
@@ -146,16 +176,11 @@ class Game:
                         self.is_running = False
                         pygame.quit()
                         quit()
-                    if e.key == pygame.K_SPACE:
-                        del camera
-                        bacterium.split()
-                    if e.key == pygame.K_w:
-                        bacterium.feed()
                 if e.type == pygame.QUIT:
                     self.is_running = False
                     pygame.quit()
                     quit()
-                if bacterium.mass > WIDTH_ZONE - 100:
+                if bacterium.mass > WIDTH_ZONE - 100 or bacterium.mass <= 1:
                     bacterium.mass = WIDTH_ZONE
                     self.is_running = False
                     MainMenu.start()
@@ -188,56 +213,14 @@ class Camera:
     def centre(self, bacterium_or_position):
         if isinstance(bacterium_or_position, Player):
             x, y = bacterium_or_position.x, bacterium_or_position.y
-            self.x = (WIDTH/2) - (x * self.zoom)
-            self.y = (HEIGHT/2) - (y * self.zoom)
+            self.x = (WIDTH / 2) - (x * self.zoom)
+            self.y = (HEIGHT / 2) - (y * self.zoom)
         elif type(bacterium_or_position) == tuple:
             self.x, self.y = bacterium_or_position
 
     def update(self, target):
         self.zoom = 100 / target.mass + 0.3
         self.centre(bacterium)
-
-
-class Cell(CanPaint):
-    def __init__(self, surface, cam):
-        super().__init__(surface, cam)
-        self.mass = 5
-        self.x, self.y = rnd.randint(11, WIDTH_ZONE - 11), rnd.randint(11, WIDTH_ZONE - 11)
-        colors_cells = [
-            [242, 242, 101],
-            [141, 6, 191],
-            [141, 66, 212],
-            [232, 22, 88],
-            [242, 232, 33],
-            [212, 55, 121],
-            [22, 212, 11],
-            [22, 232, 55],
-            [202, 101, 252],
-            [242, 151, 33]
-        ]
-        self.color = rnd.choice(colors_cells)
-
-    def draw(self):
-        zoom = self.camera.zoom
-        x, y = self.camera.x, self.camera.y
-        place_spawn = (int(self.x * zoom + x), int(self.y * zoom + y))
-        pygame.draw.circle(self.surface, self.color, place_spawn, int(self.mass * zoom))
-
-
-class CellList(CanPaint):
-    def __init__(self, surface, cam, num):
-        super().__init__(surface, cam)
-        self.cell_list = []
-        for _ in range(num):
-            self.cell_list.append(Cell(self.surface, self.camera))
-
-    def new_cell(self, num=1):
-        for _ in range(num):
-            self.cell_list.append(Cell(self.surface, self.camera))
-
-    def draw(self):
-        for cell in self.cell_list:
-            cell.draw()
 
 
 class Grid(CanPaint):
@@ -263,12 +246,13 @@ class Player(CanPaint):
         self.outline_size = 3 + self.mass / 2
         self.color = "#00c77b"
         self.outline_color = "#007a3f"
+        self.poison = False
 
     def collision_check(self, foods):
         for food in foods:
             if Game().get_distance([food.x, food.y], [self.x, self.y]) <= self.mass / 2:
-                self.mass += 1
                 eat_sound.play()
+                food(self)
                 foods.remove(food)
                 cells.new_cell(rnd.choice([1, 0, 1]))
 
@@ -298,16 +282,6 @@ class Player(CanPaint):
         else:
             self.y += vy
 
-    def feed(self):
-        """Unsupported feature.
-        """
-        pass
-
-    def split(self):
-        """Unsupported feature.
-        """
-        pass
-
     def draw(self):
         """Draws the player as an outlined circle.
         """
@@ -327,11 +301,144 @@ class Player(CanPaint):
                                          self.y * zoom + y - int(fh / 2) + 15), Player.FONT_COLOR)
 
 
-# Initialize essential entities
+class CellList(CanPaint):
+    def __init__(self, surface, cam, num):
+        super().__init__(surface, cam)
+        self.cell_list = []
+        for _ in range(num):
+            cell = choice_color()
+            self.cell_list.append(cell)
+
+    def new_cell(self, num=1):
+        for _ in range(num):
+            self.cell_list.append(rnd.choice(
+                [
+                    GreenCell,
+                    RedCell,
+                    PurpleCell,
+                    WhiteCell,
+                    RainbowCell,
+                    PinkCell
+                ])(self.surface, self.camera))
+
+    def draw(self):
+        for cell in self.cell_list:
+            cell.draw()
+
+
+class Cell(CanPaint):
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
+        self.mass = 10
+        self.x, self.y = rnd.randint(11, WIDTH_ZONE - 11), rnd.randint(11, WIDTH_ZONE - 11)
+        colors_cells = [
+            [242, 242, 101],
+            [141, 6, 191],
+            [141, 66, 212],
+            [232, 22, 88],
+            [242, 232, 33],
+            [212, 55, 121],
+            [22, 212, 11],
+            [22, 232, 55],
+            [202, 101, 252],
+            [242, 151, 33]
+        ]
+        self.color = rnd.choice(colors_cells)
+        self.do = rnd.choice([1, 2, 3])
+
+    def draw(self):
+        zoom = self.camera.zoom
+        x, y = self.camera.x, self.camera.y
+        place_spawn = (int(self.x * zoom + x), int(self.y * zoom + y))
+        pygame.draw.circle(self.surface, self.color, place_spawn, int(self.mass * zoom))
+
+    def __call__(self, player):
+        pass
+
+
+class GreenCell(Cell):
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
+        self.color = (0, 255, 0)
+
+    def __call__(self, player: Player):
+        bacterium.mass += 1
+
+
+class RedCell(Cell):
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
+        self.color = (255, 0, 0)
+
+    def __call__(self, player: Player):
+        bacterium.mass -= 15
+
+
+class PurpleCell(Cell):
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
+        self.color = (139, 0, 255)
+
+    def __call__(self, player: Player):
+        time.sleep(2)
+
+
+class WhiteCell(Cell):
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
+        self.color = (255, 255, 255)
+
+    def __call__(self, player: Player):
+        bacterium.mass = 1
+
+
+class RainbowCell(Cell):
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
+        colors = [
+            [242, 242, 101], [242, 242, 101], [242, 242, 101], [242, 242, 101], [242, 242, 101], [242, 242, 101],
+            [141, 6, 191], [141, 6, 191], [141, 6, 191], [141, 6, 191], [141, 6, 191], [141, 6, 191],
+            [141, 66, 212], [141, 66, 212], [141, 66, 212], [141, 66, 212], [141, 66, 212], [141, 66, 212],
+            [232, 22, 88], [232, 22, 88], [232, 22, 88], [232, 22, 88], [232, 22, 88], [232, 22, 88],
+            [242, 232, 33], [242, 232, 33], [242, 232, 33], [242, 232, 33], [242, 232, 33], [242, 232, 33],
+            [212, 55, 121], [212, 55, 121], [212, 55, 121], [212, 55, 121], [212, 55, 121], [212, 55, 121],
+            [22, 212, 11], [22, 212, 11], [22, 212, 11], [22, 212, 11], [22, 212, 11], [22, 212, 11],
+            [22, 232, 55], [22, 232, 55], [22, 232, 55], [22, 232, 55], [22, 232, 55], [22, 232, 55],
+            [202, 101, 252], [202, 101, 252], [202, 101, 252], [202, 101, 252], [202, 101, 252], [202, 101, 252],
+            [242, 151, 33], [242, 151, 33], [242, 151, 33], [242, 151, 33], [242, 151, 33], [242, 151, 33],
+        ]
+        self.color = cycle(colors)
+
+    def draw(self):
+        zoom = self.camera.zoom
+        x, y = self.camera.x, self.camera.y
+        place_spawn = (int(self.x * zoom + x), int(self.y * zoom + y))
+        pygame.draw.circle(self.surface, next(self.color), place_spawn, int(self.mass * zoom))
+
+    def __call__(self, player: Player):
+        bacterium.mass += 20
+
+
+class PinkCell(Cell):
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
+        self.color = (255, 155, 170)
+        self.do = rnd.choice([GreenCell(surface, cam), RedCell(surface, cam), RainbowCell(surface, cam),
+                              WhiteCell(surface, cam)])
+
+    def draw(self):
+        zoom = self.camera.zoom
+        x, y = self.camera.x, self.camera.y
+        place_spawn = (int(self.x * zoom + x), int(self.y * zoom + y))
+        pygame.draw.circle(self.surface, self.color, place_spawn, int(self.mass * zoom))
+
+    def __call__(self, player: Player):
+        self.do(player)
+
+
 camera = Camera()
 grid = Grid(screen, camera)
-cells = CellList(screen, camera, 700)
+cells = CellList(screen, camera, 500)
 bacterium = Player(screen, camera)
-
 
 MainMenu.start()
