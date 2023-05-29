@@ -1,7 +1,7 @@
 import pygame
 import pygame_menu
 import math
-import random as rnd
+from random import *
 
 WIDTH, HEIGHT = 1200, 800
 WIDTH_ZONE, HEIGHT_ZONE = 3000, 3000
@@ -119,7 +119,7 @@ class Game:
     def get_distance(cls, bac1, bac2):
         dist_x = abs(bac1[0] - bac2[0])
         dist_y = abs(bac1[1] - bac2[1])
-        return (dist_x ** 2 + dist_y ** 2) ** 0.5  # длина между центрами окружностей
+        return (dist_x ** 2 + dist_y ** 2) ** 0.5
 
     @classmethod
     def drawtext(cls, message, pos, color=(255, 255, 255)):
@@ -136,6 +136,7 @@ class Game:
         painter.add(grid)
         painter.add(cells)
         painter.add(bacterium)
+        painter.add(enimies)
         menu_sound.pause()
         while self.is_running:
             clock.tick(FPS)
@@ -146,11 +147,6 @@ class Game:
                         self.is_running = False
                         pygame.quit()
                         quit()
-                    if e.key == pygame.K_SPACE:
-                        del camera
-                        bacterium.split()
-                    if e.key == pygame.K_w:
-                        bacterium.feed()
                 if e.type == pygame.QUIT:
                     self.is_running = False
                     pygame.quit()
@@ -160,23 +156,19 @@ class Game:
                     self.is_running = False
                     MainMenu.start()
 
-            bacterium.move()
-            bacterium.collision_check(cells.cell_list)
+            for enity in (bacterium, *enimies.enemy_list):
+                if bacterium is None:
+                    self.is_running = False
+                    MainMenu.start()
+
+                enity.move()
+                enity.collision_check()
             if camera is not None:
                 camera.update(bacterium)
             screen.fill((9, 10, 21))
             painter.paint()
 
             pygame.display.flip()
-
-
-class CanPaint:
-    def __init__(self, surface, cam):
-        self.surface = surface
-        self.camera = cam
-
-    def draw(self):
-        pass
 
 
 class Camera:
@@ -198,11 +190,22 @@ class Camera:
         self.centre(bacterium)
 
 
-class Cell(CanPaint):
+class Entity:
+    FONT_COLOR = "#deeece"
+
+    def __init__(self, surface, cam):
+        self.surface = surface
+        self.camera = cam
+
+    def draw(self):
+        pass
+
+
+class Cell(Entity):
     def __init__(self, surface, cam):
         super().__init__(surface, cam)
         self.mass = 5
-        self.x, self.y = rnd.randint(11, WIDTH_ZONE - 11), rnd.randint(11, WIDTH_ZONE - 11)
+        self.x, self.y = randint(11, WIDTH_ZONE - 11), randint(11, WIDTH_ZONE - 11)
         colors_cells = [
             [242, 242, 101],
             [141, 6, 191],
@@ -215,7 +218,7 @@ class Cell(CanPaint):
             [202, 101, 252],
             [242, 151, 33]
         ]
-        self.color = rnd.choice(colors_cells)
+        self.color = choice(colors_cells)
 
     def draw(self):
         zoom = self.camera.zoom
@@ -224,7 +227,7 @@ class Cell(CanPaint):
         pygame.draw.circle(self.surface, self.color, place_spawn, int(self.mass * zoom))
 
 
-class CellList(CanPaint):
+class CellList(Entity):
     def __init__(self, surface, cam, num):
         super().__init__(surface, cam)
         self.cell_list = []
@@ -240,40 +243,156 @@ class CellList(CanPaint):
             cell.draw()
 
 
-class Grid(CanPaint):
-    def __init__(self, surface, cam):
+class Enemy(Entity):
+    def __init__(self, surface, cam, name=None):
         super().__init__(surface, cam)
-        self.color_grid = "#00bfff"
+        self.x, self.y = randint(300, WIDTH_ZONE - 300), randint(300, WIDTH_ZONE - 300)
+        self.mass, self.speed = 20, 4
+        self.outline_size = 3 + self.mass / 2
+        self.name = name
+        self.color = "#00c77b"
+        self.outline_color = "#007a3f"
+        if not self.name:
+            self.name = "Enemy"
+
+    def collision_check(self):
+        global bacterium
+
+        if Game().get_distance([bacterium.x, bacterium.y], [self.x, self.y]) <= self.mass / 2:
+            bacterium = None
+
+        for entity in enimies.enemy_list:
+
+            if entity == self:
+                continue
+
+            if Game().get_distance([entity.x, entity.y], [self.x, self.y]) <= self.mass / 2:
+                self.mass += entity.mass / 2
+                enimies.enemy_list.remove(entity)
+                enimies.new_enemy(1)
+
+        for food in cells.cell_list:
+
+            if Game().get_distance([food.x, food.y], [self.x, self.y]) <= self.mass / 2:
+                self.mass += 0.25
+                cells.cell_list.remove(food)
+                cells.new_cell(choice([1, 0, 1]))
+
+    def move(self):
+        for entity in enimies.enemy_list:
+            if self.x == entity.x and self.y == entity.y:
+                continue
+
+            if math.dist((self.x, self.y), (entity.x, entity.x)) <= 500:
+                self.outline_size = 3 + self.mass / 2
+                go_x, go_y = entity.x, entity.y
+                rotation = math.atan2(go_y - float(HEIGHT) / 2, go_x - float(WIDTH) / 2)
+                rotation *= 180 / math.pi
+                normalized = (90 - abs(rotation)) / 90
+                vx = self.speed * normalized
+                if rotation < 0:
+                    vy = -self.speed + abs(vx)
+                else:
+                    vy = self.speed - abs(vx)
+
+                if self.x + vx - self.outline_size < 0:
+                    self.x = self.outline_size
+                elif self.x + vx + self.outline_size > WIDTH_ZONE:
+                    self.x = WIDTH_ZONE - self.outline_size
+                else:
+                    self.x += vx
+
+                if self.y + vy - self.outline_size < 0:
+                    self.y = self.outline_size
+                elif self.y + vy + self.outline_size > HEIGHT_ZONE:
+                    self.y = HEIGHT_ZONE - self.outline_size
+                else:
+                    self.y += vy
+                break
+
+        for food in cells.cell_list:
+            if math.dist((self.x, self.y), (food.x, food.x)) <= 500:
+                self.outline_size = 3 + self.mass / 2
+                go_x, go_y = food.x, food.y
+                rotation = math.atan2(go_y - float(HEIGHT) / 2, go_x - float(WIDTH) / 2)
+                rotation *= 180 / math.pi
+                normalized = (90 - abs(rotation)) / 90
+                vx = self.speed * normalized
+                if rotation < 0:
+                    vy = -self.speed + abs(vx)
+                else:
+                    vy = self.speed - abs(vx)
+
+                if self.x + vx - self.outline_size < 0:
+                    self.x = self.outline_size
+                elif self.x + vx + self.outline_size > WIDTH_ZONE:
+                    self.x = WIDTH_ZONE - self.outline_size
+                else:
+                    self.x += vx
+
+                if self.y + vy - self.outline_size < 0:
+                    self.y = self.outline_size
+                elif self.y + vy + self.outline_size > HEIGHT_ZONE:
+                    self.y = HEIGHT_ZONE - self.outline_size
+                else:
+                    self.y += vy
+                break
 
     def draw(self):
         zoom = self.camera.zoom
-        x, y = self.camera.x, self.camera.y
-        for i in range(0, WIDTH_ZONE + 1, 50):
-            pygame.draw.line(self.surface, self.color_grid, (x, y + i * zoom), (WIDTH_ZONE * zoom + x, i * zoom + y), 3)
-            pygame.draw.line(self.surface, self.color_grid, (x + i * zoom, y), (i * zoom + x, WIDTH_ZONE * zoom + y), 3)
+        center = (int(self.x * zoom), int(self.y * zoom))
+
+        # Draw the outline of the player as a darker, bigger circle
+        pygame.draw.circle(self.surface, self.outline_color, center, int((self.mass / 2 + 3) * zoom))
+        # Draw the actual player as a circle
+        pygame.draw.circle(self.surface, self.color, center, int(self.mass / 2 * zoom))
+        # Draw player's name
+        fw, fh = font.size(self.name)
+        Game().drawtext(self.name, (self.x * zoom - int(fw / 2), self.y * zoom - int(fh / 2)),
+                        Player.FONT_COLOR)
 
 
-class Player(CanPaint):
-    FONT_COLOR = "#deeece"
-
-    def __init__(self, surface, cam):
+class EnemyList(Entity):
+    def __init__(self, surface, cam, num):
         super().__init__(surface, cam)
-        self.x, self.y = rnd.randint(300, WIDTH_ZONE - 300), rnd.randint(300, WIDTH_ZONE - 300)
+        self.enemy_list = []
+        for _ in range(num):
+            self.enemy_list.append(Enemy(self.surface, self.camera))
+
+    def new_enemy(self, num=1):
+        for _ in range(num):
+            self.enemy_list.append(Enemy(self.surface, self.camera))
+
+    def draw(self):
+        for enemy in self.enemy_list:
+            enemy.draw()
+
+
+class Player(Entity):
+    def __init__(self, surface, cam, name=None):
+        super().__init__(surface, cam)
+        self.name = name
+        self.x, self.y = randint(300, WIDTH_ZONE - 300), randint(300, WIDTH_ZONE - 300)
         self.mass, self.speed = 20, 4
         self.outline_size = 3 + self.mass / 2
         self.color = "#00c77b"
         self.outline_color = "#007a3f"
+        if not self.name:
+            self.name = "YOU"
 
-    def collision_check(self, foods):
-        for food in foods:
+    def collision_check(self):
+        for food in cells.cell_list:
             if Game().get_distance([food.x, food.y], [self.x, self.y]) <= self.mass / 2:
-                self.mass += 1
-                eat_sound.play()
-                foods.remove(food)
-                cells.new_cell(rnd.choice([1, 0, 1]))
+                self.mass += 0.25
+                cells.cell_list.remove(food)
+                cells.new_cell(choice([1, 0, 1]))
+        for entity in enimies.enemy_list:
+            if Game().get_distance([entity.x, entity.y], [self.x, self.y]) <= self.mass / 2:
+                self.mass += entity.mass / 2
+                enimies.enemy_list.remove(entity)
+                enimies.new_enemy(1)
 
     def move(self):
-        self.outline_size = 3 + self.mass / 2
         go_x, go_y = pygame.mouse.get_pos()
         rotation = math.atan2(go_y - float(HEIGHT) / 2, go_x - float(WIDTH) / 2)
         rotation *= 180 / math.pi
@@ -285,7 +404,7 @@ class Player(CanPaint):
             vy = self.speed - abs(vx)
 
         if self.x + vx - self.outline_size < 0:
-            self.x = self.outline_size
+            self.x = self.mass / 2 + self.outline_size
         elif self.x + vx + self.outline_size > WIDTH_ZONE:
             self.x = WIDTH_ZONE - self.outline_size
         else:
@@ -298,19 +417,7 @@ class Player(CanPaint):
         else:
             self.y += vy
 
-    def feed(self):
-        """Unsupported feature.
-        """
-        pass
-
-    def split(self):
-        """Unsupported feature.
-        """
-        pass
-
     def draw(self):
-        """Draws the player as an outlined circle.
-        """
         zoom = self.camera.zoom
         x, y = self.camera.x, self.camera.y
         center = (int(self.x * zoom + x), int(self.y * zoom + y))
@@ -320,18 +427,29 @@ class Player(CanPaint):
         # Draw the actual player as a circle
         pygame.draw.circle(self.surface, self.color, center, int(self.mass / 2 * zoom))
         # Draw player's name
-        fw, fh = font.size(Game.get_name())
-        Game().drawtext(Game.get_name(), (self.x * zoom + x - int(fw / 2),
-                                          self.y * zoom + y - int(fh / 2) - 5), Player.FONT_COLOR)
-        Game().drawtext(str(self.mass), ((self.x * zoom + x - int(fw / 2)) * 1.05,
-                                         self.y * zoom + y - int(fh / 2) + 15), Player.FONT_COLOR)
+        fw, fh = font.size(self.name)
+        Game().drawtext(self.name, (self.x * zoom + x - int(fw / 2), self.y * zoom + y - int(fh / 2)),
+                        Player.FONT_COLOR)
 
 
-# Initialize essential entities
+class Grid(Entity):
+    def __init__(self, surface, cam):
+        super().__init__(surface, cam)
+        self.color_grid = "#00bfff"
+
+    def draw(self):
+        zoom = self.camera.zoom
+        x, y = self.camera.x, self.camera.y
+        for i in range(0, WIDTH_ZONE + 1, 50):
+            pygame.draw.line(self.surface, self.color_grid, (x, y + i * zoom), (WIDTH_ZONE * zoom + x, i * zoom + y), 3)
+            pygame.draw.line(self.surface, self.color_grid, (x + i * zoom, y), (i * zoom + x, WIDTH_ZONE * zoom + y), 3)
+
+
 camera = Camera()
 grid = Grid(screen, camera)
 cells = CellList(screen, camera, 700)
 bacterium = Player(screen, camera)
+enimies = EnemyList(screen, camera, 20)
 
 
 MainMenu.start()

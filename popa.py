@@ -9,11 +9,9 @@ from Game_IT_cube import font
 
 from random import *
 
-COLOR = ()
-
 
 class Entity:
-    FONT_COLOR = "#2a2a2c"
+    FONT_COLOR = "#deeece"
 
     def __init__(self, surface, camera):
         self.surface = surface
@@ -27,8 +25,20 @@ class Cell(Entity):
     def __init__(self, surface, cam):
         super().__init__(surface, cam)
         self.mass = 5
-        self.x, self.y = randint(11, 2489), randint(11, 2489)
-        self.color = (245, 0, 245)
+        self.x, self.y = randint(11, WIDTH_ZONE - 11), randint(11, WIDTH_ZONE - 11)
+        colors_cells = [
+            [242, 242, 101],
+            [141, 6, 191],
+            [141, 66, 212],
+            [232, 22, 88],
+            [242, 232, 33],
+            [212, 55, 121],
+            [22, 212, 11],
+            [22, 232, 55],
+            [202, 101, 252],
+            [242, 151, 33]
+        ]
+        self.color = choice(colors_cells)
 
     def draw(self):
         zoom = self.camera.zoom
@@ -54,14 +64,14 @@ class CellList(Entity):
 
 
 class Enemy(Entity):
-    def __init__(self, surface, camera,  name, color, outline_color):
+    def __init__(self, surface, camera,  name=None):
         super().__init__(surface, camera)
-        self.x, self.y = randint(300, 2200), randint(300, 2200)
+        self.x, self.y = randint(300, WIDTH_ZONE - 300), randint(300, WIDTH_ZONE - 300)
         self.mass, self.speed = 20, 4
         self.outline_size = 3 + self.mass / 2
         self.name = name
-        self.color = color
-        self.outline_color = outline_color
+        self.color = "#00c77b"
+        self.outline_color = "#007a3f"
         if not self.name:
             self.name = "Enemy"
 
@@ -69,7 +79,7 @@ class Enemy(Entity):
 
         for entity in entites:
 
-            if entity.x == self.x and entity.y == self.y:
+            if entity == self:
                 continue
 
             if Game().get_distance([entity.x, entity.y], [self.x, self.y]) <= self.mass / 2:
@@ -160,11 +170,11 @@ class EnemyList(Entity):
         super().__init__(surface, cam)
         self.enemy_list = []
         for _ in range(num):
-            self.enemy_list.append(Enemy(self.surface, self.camera, choice(COLOR), *choice(COLOR)))
+            self.enemy_list.append(Enemy(self.surface, self.camera))
 
-    def new_cell(self, num=1):
+    def new_enemy(self, num=1):
         for _ in range(num):
-            self.enemy_list.append(Enemy(self.surface, self.camera, choice(COLOR), *choice(COLOR)))
+            self.enemy_list.append(Enemy(self.surface, self.camera))
 
     def draw(self):
         for cell in self.enemy_list:
@@ -172,14 +182,14 @@ class EnemyList(Entity):
 
 
 class Player(Entity):
-    def __init__(self, surface, camera, name, color, outline_color):
+    def __init__(self, surface, camera, name=None):
         super().__init__(surface, camera)
         self.name = name
-        self.x, self.y = randint(300, 2200), randint(300, 2200)
+        self.x, self.y = randint(300, WIDTH_ZONE - 300), randint(300, WIDTH_ZONE - 300)
         self.mass, self.speed = 20, 4
         self.outline_size = 3 + self.mass / 2
-        self.color = color
-        self.outline_color = outline_color
+        self.color = "#00c77b"
+        self.outline_color = "#007a3f"
         if not self.name:
             self.name = "YOU"
 
