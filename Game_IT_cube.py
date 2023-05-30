@@ -64,14 +64,24 @@ class Painter:
 
 class MainMenu(pygame_menu.Menu):
     def __init__(self):
-        super().__init__('Welcome to Bubble Fight', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
-        self.add.text_input('Name: ', default='username', maxchar=12, onchange=Game.set_name)
-        self.add.button('Play', self.start_the_game)
-        self.add.button('Manual', self.manual_menu)
-        # self.add.button('Settings', self.settings_menu)
-        self.add.button('Quit', pygame_menu.events.EXIT)
+        super().__init__('Добро пожаловать в Bubble Fight', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
+        self.add.text_input('Имя: ', default='username', maxchar=12, onchange=Game.set_name)
+        self.add.button('Играть', self.start_the_game)
+        self.add.button('Инструкция', self.manual_menu)
+        # self.add.button('Настройки', self.settings_menu)
+        self.add.button('Выйти', pygame_menu.events.EXIT)
 
-        self.manual = pygame_menu.Menu('Manual :', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
+        self.manual = pygame_menu.Menu('Инструкция :', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
+        self.manual.add.label("Ваш герой - это пузырь, который хочет вырасти.\n"
+                              "Сьедая другие пузырики он растёт.\n"
+                              "Виды пузыриков:\n"
+                              "Зеленый - увеличивает массу на 1.\n"
+                              "Красный - уменьшает массу на 15.\n"
+                              "Разноцветный - увеличивает массу на 20.\n"
+                              "Белый - лопает пузырь.\n"
+                              "Фиолетовый - замораживает пузырь на 2 секунды.\n"
+                              "Розовый - имеет особеность одного из выше перечисленных пузыриков.\n"
+                              "Удачи!!!")
 
         self.settings = pygame_menu.Menu('Settings :', WIDTH, HEIGHT, theme=pygame_menu.themes.THEME_DARK)
         self.settings.add.progress_bar('Volume :', level_volume * 100, onchange=Game.set_volume_music)
@@ -120,7 +130,6 @@ class MainMenu(pygame_menu.Menu):
 
     def manual_menu(self):
         click.play()
-
         self._open(self.manual)
 
 
@@ -283,8 +292,6 @@ class Player(CanPaint):
             self.y += vy
 
     def draw(self):
-        """Draws the player as an outlined circle.
-        """
         zoom = self.camera.zoom
         x, y = self.camera.x, self.camera.y
         center = (int(self.x * zoom + x), int(self.y * zoom + y))
@@ -438,7 +445,7 @@ class PinkCell(Cell):
 
 camera = Camera()
 grid = Grid(screen, camera)
-cells = CellList(screen, camera, 500)
+cells = CellList(screen, camera, 700)
 bacterium = Player(screen, camera)
 
 MainMenu.start()
